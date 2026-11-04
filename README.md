@@ -37,6 +37,7 @@ a music subscription, offline server downloads, or server playlist syncing.
 - ⭐ Rate songs and view their ratings in Now Playing and Cover Flow.
 - 💾 Optionally write ratings to local files' `RATING` metadata tag after
   granting folder access once in **Settings**.
+- ⭐ Browse a read-only Starred playlist built from songs rated 1–5 stars.
 - 📝 View embedded lyrics when available.
 - 🎶 Play MP3, WAV, FLAC, M4A, MP4, Ogg, Opus, AAC, AIFF, APE, and MOV audio,
   subject to the platform's playback support.
