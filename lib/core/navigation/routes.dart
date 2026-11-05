@@ -19,7 +19,7 @@ import 'package:classipod/features/music/cover_flow/screens/cover_flow_album_sel
 import 'package:classipod/features/music/cover_flow/screens/cover_flow_screen.dart';
 import 'package:classipod/features/music/genres/screens/genre_songs_screen.dart';
 import 'package:classipod/features/music/genres/screens/genres_screen.dart';
-import 'package:classipod/features/music/playlist/providers/playlists_provider.dart';
+import 'package:classipod/features/music/playlist/models/playlist_model.dart';
 import 'package:classipod/features/music/playlist/screens/playlist_rename_screen.dart';
 import 'package:classipod/features/music/playlist/screens/playlist_songs_more_options_modal.dart';
 import 'package:classipod/features/music/playlist/screens/playlist_songs_screen.dart';
@@ -572,8 +572,12 @@ final routerProvider = Provider(
                               child: ScreenPageContent(
                                 child: PlaylistSongsScreen(
                                   playlistKey: isVirtualPlaylistKey(state.extra)
-                                      ? state.extra
-                                      : int.tryParse(state.extra as String),
+                                    ? starredPlaylistKey
+                                    : state.extra is String
+                                        ? int.tryParse(state.extra as String)
+                                        : state.extra is int
+                                            ? state.extra as int
+                                            : null,
                                 ),
                               ),
                             ),

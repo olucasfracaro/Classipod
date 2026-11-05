@@ -21,9 +21,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 class PlaylistSongsScreen extends ConsumerStatefulWidget {
-  final dynamic playlistKey;
+  final int? playlistKey;
 
-  const PlaylistSongsScreen({super.key, required this.playlistKey});
+  const PlaylistSongsScreen({
+      super.key,
+      required this.playlistKey
+  });
 
   @override
   ConsumerState createState() => _PlaylistsSongsScreenState();
@@ -111,33 +114,8 @@ class _PlaylistsSongsScreenState extends ConsumerState<PlaylistSongsScreen>
     if (isVirtualPlaylist) {
       final songIndex = _songIndexAtDisplayIndex(index);
       if (songIndex < 0) return;
-      final selected = displayItems[songIndex];
-      var remote = ref.read(subsonicControllerProvider).value;
-      if (selected.isSubsonic &&
-          remote?.enabled == true &&
-          remote?.config?.id == selected.serverId &&
-          remote?.signedIn != true) {
-        await showSubsonicDialog(context);
-        if (!mounted) return;
-        remote = ref.read(subsonicControllerProvider).value;
-      }
-      if (selected.isSubsonic && !(remote?.available(selected) ?? false)) {
-        return;
-      }
-      final playable = displayItems
-          .where(
-            (song) => !song.isSubsonic || (remote?.available(song) ?? false),
-          )
-          .toList();
-      await ref
-          .read(audioPlayerServiceProvider.notifier)
-          .playPlaylist(
-            playlistDetail: playlist.copyWith(songs: playable),
-            songIndex: playable.indexOf(selected),
-          );
-      if (mounted) {
-        await context.openUniqueNamed(Routes.nowPlaying.name);
-      }
+
+      await _playSelectedSong(displayItems[songIndex]);
       return;
     }
 
@@ -185,39 +163,51 @@ class _PlaylistsSongsScreenState extends ConsumerState<PlaylistSongsScreen>
         context.pop();
       }
     } else {
-      final selected = displayItems[index - playlistOptionCount];
-      var remote = ref.read(subsonicControllerProvider).value;
-      if (selected.isSubsonic &&
-          remote?.enabled == true &&
-          remote?.config?.id == selected.serverId &&
-          remote?.signedIn != true) {
-        await showSubsonicDialog(context);
-        if (!mounted) return;
-        remote = ref.read(subsonicControllerProvider).value;
-      }
-      if (selected.isSubsonic && !(remote?.available(selected) ?? false)) {
-        return;
-      }
-      final playable = displayItems
-          .where(
-            (song) => !song.isSubsonic || (remote?.available(song) ?? false),
-          )
-          .toList();
-      await ref
-          .read(audioPlayerServiceProvider.notifier)
-          .playPlaylist(
-            playlistDetail: playlist.copyWith(songs: playable),
-            songIndex: playable.indexOf(selected),
-          );
-      if (mounted) {
-        await context.openUniqueNamed(Routes.nowPlaying.name);
-      }
+      await _playSelectedSong(displayItems[index - playlistOptionCount]);
+    }
+  }
+
+  Future<void> _playSelectedSong(MusicMetadata selected) async {
+    var remote = ref.read(subsonicControllerProvider).value;
+
+    if (selected.isSubsonic &&
+        remote?.enabled == true &&
+        remote?.config?.id == selected.serverId &&
+        remote?.signedIn != true) {
+      await showSubsonicDialog(context);
+      if (!mounted) return;
+      remote = ref.read(subsonicControllerProvider).value;
+    }
+
+    if (selected.isSubsonic && !(remote?.available(selected) ?? false)) {
+      return;
+    }
+
+    final playable = displayItems
+        .where((song) => !song.isSubsonic || (remote?.available(song) ?? false))
+        .toList();
+
+    await ref
+        .read(audioPlayerServiceProvider.notifier)
+        .playPlaylist(
+          playlistDetail: playlist.copyWith(songs: playable),
+          songIndex: playable.indexOf(selected),
+        );
+
+    if (mounted) {
+      await context.openUniqueNamed(Routes.nowPlaying.name);
     }
   }
 
   Future<void> _performLongPressAction(int index) async {
-    if (isVirtualPlaylist) return;
     if (displayItems.isEmpty) return;
+    if (isVirtualPlaylist) {
+      final selected = displayItems[index];
+      await ref
+          .read(nowPlayingDetailsProvider.notifier)
+          .updateMetadata(selected.copyWith(rating: 0));
+      return;
+    }
     setState(() => selectedDisplayItem = index);
     if (index < 2) {
       return;
