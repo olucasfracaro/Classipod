@@ -72,6 +72,38 @@ void main() {
     },
   );
 
+  test('Starred songs are sorted by rating and album', () async {
+    final songs = [
+      MusicMetadata(songId: 'one-star', rating: 1, albumName: 'Album C'),
+      MusicMetadata(songId: 'three-stars', rating: 3, albumName: 'Album B'),
+      MusicMetadata(songId: 'five-stars', rating: 5, albumName: 'Album Z'),
+      MusicMetadata(
+        songId: 'five-stars-early',
+        rating: 5,
+        albumName: 'Album A',
+      ),
+      MusicMetadata(songId: 'unrated'),
+    ];
+    final container = ProviderContainer(
+      overrides: [
+        filteredAudioFilesProvider.overrideWith(
+          (ref) async => UnmodifiableListView(songs),
+        ),
+      ],
+    );
+    addTearDown(container.dispose);
+
+    await container.read(filteredAudioFilesProvider.future);
+    final playlists = container.read(playlistsProvider);
+
+    expect(playlists[1].songs.map((song) => song.songId), [
+      'five-stars-early',
+      'five-stars',
+      'three-stars',
+      'one-star',
+    ]);
+  });
+
   test('rating updates do not clear On The Go songs', () async {
     var songs = <MusicMetadata>[MusicMetadata(songId: 'song')];
     final container = ProviderContainer(

@@ -571,10 +571,8 @@ final routerProvider = Provider(
                             pageBuilder: (context, state) => CupertinoPage(
                               child: ScreenPageContent(
                                 child: PlaylistSongsScreen(
-                                  playlistKey:
-                                      (state.extra as String) ==
-                                          starredPlaylistKey
-                                      ? starredPlaylistKey
+                                  playlistKey: isVirtualPlaylistKey(state.extra)
+                                      ? state.extra
                                       : int.tryParse(state.extra as String),
                                 ),
                               ),

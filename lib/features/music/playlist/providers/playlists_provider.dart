@@ -1,6 +1,7 @@
 import 'package:classipod/core/constants/constants.dart';
 import 'package:classipod/core/models/music_metadata.dart';
 import 'package:classipod/core/providers/filtered_audio_files_provider.dart';
+import 'package:classipod/core/utils/album_order.dart';
 import 'package:classipod/core/utils/name_order.dart';
 import 'package:classipod/features/music/album/models/album_model.dart';
 import 'package:classipod/features/music/playlist/models/playlist_model.dart';
@@ -9,10 +10,22 @@ import 'package:hive_ce_flutter/hive_flutter.dart';
 
 const starredPlaylistKey = '__starred__';
 
+String starredRatingPlaylistName(int rating) => '★' * rating;
+
+bool isVirtualPlaylistKey(dynamic key) => key == starredPlaylistKey;
+
 final starredPlaylistProvider = Provider<List<MusicMetadata>>((ref) {
   final List<MusicMetadata> songs =
       ref.watch(filteredAudioFilesProvider).value ?? [];
-  return songs.where((song) => song.rating >= 1).toList();
+  return songs.where((song) => song.rating >= 1).toList()..sort((a, b) {
+    final ratingComparison = b.rating.compareTo(a.rating);
+    if (ratingComparison != 0) return ratingComparison;
+
+    final albumComparison = compareNames(a.getAlbumName, b.getAlbumName);
+    if (albumComparison != 0) return albumComparison;
+
+    return compareAlbumTracks(a, b);
+  });
 });
 
 final playlistsProvider =
@@ -87,7 +100,7 @@ class PlaylistsNotifier extends Notifier<List<PlaylistModel>> {
     required String newPlaylistName,
   }) async {
     // Can't rename virtual playlist options.
-    if (playlistKey == null || playlistKey == starredPlaylistKey) {
+    if (playlistKey == null || isVirtualPlaylistKey(playlistKey)) {
       return;
     } else {
       final currentPlaylist = _playlistBox.get(playlistKey);
@@ -103,7 +116,7 @@ class PlaylistsNotifier extends Notifier<List<PlaylistModel>> {
 
   Future<void> clearPlaylist({required dynamic playlistKey}) async {
     // Can't remove virtual playlist options.
-    if (playlistKey == starredPlaylistKey) {
+    if (isVirtualPlaylistKey(playlistKey)) {
       return;
     } else if (playlistKey == null) {
       Future.delayed(const Duration(milliseconds: 350), () {
@@ -143,7 +156,7 @@ class PlaylistsNotifier extends Notifier<List<PlaylistModel>> {
     required PlaylistModel playlistModel,
     MusicMetadata? song,
   }) async {
-    if (song != null && playlistModel.key != starredPlaylistKey) {
+    if (song != null && !isVirtualPlaylistKey(playlistModel.key)) {
       await _playlistBox.put(
         playlistModel.key,
         playlistModel.removeSongFromPlaylist(song),

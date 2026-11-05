@@ -5,6 +5,7 @@ import 'package:classipod/core/navigation/routes.dart';
 import 'package:classipod/core/providers/filtered_audio_files_provider.dart';
 import 'package:classipod/core/services/audio_player_service.dart';
 import 'package:classipod/core/subsonic/subsonic_controller.dart';
+import 'package:classipod/core/theme/ipod_typography.dart';
 import 'package:classipod/core/widgets/empty_state_widget.dart';
 import 'package:classipod/core/widgets/fast_scroll_indicator.dart';
 import 'package:classipod/features/custom_screen_elements/custom_screen.dart';
@@ -37,7 +38,7 @@ class _PlaylistsSongsScreenState extends ConsumerState<PlaylistSongsScreen>
   double get displayTileHeight => 54;
 
   @override
-  int get extraDisplayItems => playlistOptionCount;
+  int get extraDisplayItems => isVirtualPlaylist ? 5 : playlistOptionCount;
 
   @override
   List<MusicMetadata> get displayItems {
@@ -45,7 +46,7 @@ class _PlaylistsSongsScreenState extends ConsumerState<PlaylistSongsScreen>
         .watch(playlistsProvider)
         .firstWhere((e) => e.key == widget.playlistKey);
     final stored = playlist.songs;
-    if (widget.playlistKey == starredPlaylistKey) {
+    if (isVirtualPlaylistKey(widget.playlistKey)) {
       return stored;
     }
     final library = ref.watch(filteredAudioFilesProvider).value;
@@ -64,9 +65,40 @@ class _PlaylistsSongsScreenState extends ConsumerState<PlaylistSongsScreen>
       .read(playlistsProvider)
       .firstWhere((e) => e.key == widget.playlistKey);
 
-  bool get isVirtualPlaylist => widget.playlistKey == starredPlaylistKey;
+  bool get isVirtualPlaylist => isVirtualPlaylistKey(widget.playlistKey);
 
   int get playlistOptionCount => isVirtualPlaylist ? 0 : 2;
+
+  int get _displayItemCount {
+    if (!isVirtualPlaylist) {
+      return displayItems.length + playlistOptionCount;
+    }
+    return displayItems.length + 5;
+  }
+
+  int _songIndexAtDisplayIndex(int index) {
+    if (!isVirtualPlaylist) {
+      return index - playlistOptionCount;
+    }
+
+    var displayIndex = 0;
+    var songIndex = 0;
+    for (var rating = 5; rating >= 1; rating--) {
+      if (index == displayIndex) {
+        return -1;
+      }
+      displayIndex++;
+      final ratingSongCount = displayItems
+          .where((song) => song.rating == rating)
+          .length;
+      if (index < displayIndex + ratingSongCount) {
+        return songIndex + index - displayIndex;
+      }
+      displayIndex += ratingSongCount;
+      songIndex += ratingSongCount;
+    }
+    return -1;
+  }
 
   @override
   Future<void> onSelectPressed() => _performAction(selectedDisplayItem);
@@ -77,7 +109,9 @@ class _PlaylistsSongsScreenState extends ConsumerState<PlaylistSongsScreen>
 
   Future<void> _performAction(int index) async {
     if (isVirtualPlaylist) {
-      final selected = displayItems[index];
+      final songIndex = _songIndexAtDisplayIndex(index);
+      if (songIndex < 0) return;
+      final selected = displayItems[songIndex];
       var remote = ref.read(subsonicControllerProvider).value;
       if (selected.isSubsonic &&
           remote?.enabled == true &&
@@ -235,16 +269,19 @@ class _PlaylistsSongsScreenState extends ConsumerState<PlaylistSongsScreen>
           Flexible(
             child: FastScrollIndicator(
               wheelScrollIndex: wheelScrollIndex,
-              itemCount: displayItems.length + playlistOptionCount,
+              itemCount: _displayItemCount,
               itemExtent: displayTileHeight,
-              labelAt: (index) => index < playlistOptionCount
-                  ? ''
-                  : displayItems[index - playlistOptionCount].getTrackName,
+              labelAt: (index) {
+                final songIndex = _songIndexAtDisplayIndex(index);
+                return songIndex < 0
+                    ? ''
+                    : displayItems[songIndex].getTrackName;
+              },
               child: CupertinoScrollbar(
                 controller: scrollController,
                 child: ListView.builder(
                   controller: scrollController,
-                  itemCount: displayItems.length + playlistOptionCount,
+                  itemCount: _displayItemCount,
                   prototypeItem: PlaylistOptionListTile(
                     onTap: () {},
                     isSelected: false,
@@ -267,22 +304,27 @@ class _PlaylistsSongsScreenState extends ConsumerState<PlaylistSongsScreen>
                       );
                     }
 
+                    final songIndex = _songIndexAtDisplayIndex(index);
+                    if (songIndex < 0) {
+                      return _RatingSeparator(
+                        rating: _ratingAtSeparatorIndex(index),
+                      );
+                    }
+
                     return PlaylistSongListTile(
-                      songMetadata: displayItems[index - playlistOptionCount],
+                      songMetadata: displayItems[songIndex],
                       unavailable:
-                          displayItems[index - playlistOptionCount]
-                              .isSubsonic &&
+                          displayItems[songIndex].isSubsonic &&
                           !(ref
                                   .watch(subsonicControllerProvider)
                                   .value
-                                  ?.available(
-                                    displayItems[index - playlistOptionCount],
-                                  ) ??
+                                  ?.available(displayItems[songIndex]) ??
                               false),
-                      isSelected: selectedDisplayItem == index,
+                      isSelected:
+                          selectedDisplayItem == index && songIndex >= 0,
                       isCurrentlyPlaying:
                           currentlyPlayingOriginalIndex ==
-                          displayItems[index - playlistOptionCount].identity,
+                          displayItems[songIndex].identity,
                       onTap: () async => _performAction(index),
                       onLongPress: () async => _performLongPressAction(index),
                     );
@@ -292,6 +334,44 @@ class _PlaylistsSongsScreenState extends ConsumerState<PlaylistSongsScreen>
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  int _ratingAtSeparatorIndex(int index) {
+    var displayIndex = 0;
+    for (var rating = 5; rating >= 1; rating--) {
+      if (index == displayIndex) return rating;
+      displayIndex++;
+      displayIndex += displayItems
+          .where((song) => song.rating == rating)
+          .length;
+    }
+    return 1;
+  }
+}
+
+class _RatingSeparator extends StatelessWidget {
+  final int rating;
+
+  const _RatingSeparator({required this.rating});
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 54,
+      width: double.infinity,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 8),
+        child: Align(
+          alignment: Alignment.centerLeft,
+          child: Text(
+            starredRatingPlaylistName(rating),
+            style: IpodTypography.metadata.copyWith(
+              color: context.appSecondaryTextColor,
+            ),
+          ),
+        ),
       ),
     );
   }
