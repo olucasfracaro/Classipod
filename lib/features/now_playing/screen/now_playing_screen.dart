@@ -329,6 +329,12 @@ class _NowPlayingScreenState extends ConsumerState<NowPlayingScreen> {
   }
 
   Future<void> seekForward() async {
+    if (_bottomBarPage == _NowPlayingBottomBarPage.ratingBar) {
+      await ref
+          .read(nowPlayingDetailsProvider.notifier)
+          .increaseCurrentMetadataRating();
+      return;
+    }
     if (_bottomBarPage == _NowPlayingBottomBarPage.shuffleBar) {
       await rotateForward();
       return;
@@ -337,6 +343,12 @@ class _NowPlayingScreenState extends ConsumerState<NowPlayingScreen> {
   }
 
   Future<void> seekBackward() async {
+    if (_bottomBarPage == _NowPlayingBottomBarPage.ratingBar) {
+      await ref
+          .read(nowPlayingDetailsProvider.notifier)
+          .decreaseCurrentMetadataRating();
+      return;
+    }
     if (_bottomBarPage == _NowPlayingBottomBarPage.shuffleBar) {
       await rotateBackward();
       return;
@@ -345,6 +357,10 @@ class _NowPlayingScreenState extends ConsumerState<NowPlayingScreen> {
   }
 
   void seekForwardLongPress() {
+    if (_bottomBarPage == _NowPlayingBottomBarPage.ratingBar) {
+      unawaited(ref.read(audioPlayerServiceProvider.notifier).nextSong());
+      return;
+    }
     _longPressTimer?.cancel();
     _longPressTimer = Timer.periodic(const Duration(milliseconds: 50), (
       _,
@@ -359,6 +375,10 @@ class _NowPlayingScreenState extends ConsumerState<NowPlayingScreen> {
   }
 
   void seekBackwardLongPress() {
+    if (_bottomBarPage == _NowPlayingBottomBarPage.ratingBar) {
+      unawaited(ref.read(audioPlayerServiceProvider.notifier).seekBackwards());
+      return;
+    }
     _longPressTimer?.cancel();
     _longPressTimer = Timer.periodic(const Duration(milliseconds: 50), (
       _,

@@ -706,7 +706,7 @@ void main() {
     await tester.pumpWidget(const SizedBox.shrink());
   });
 
-  for (final page in [0, 1, 2, 4]) {
+  for (final page in [0, 1, 4]) {
     testWidgets('seek buttons retain playback behavior on page $page', (
       tester,
     ) async {
@@ -721,6 +721,38 @@ void main() {
       await tester.pumpWidget(const SizedBox.shrink());
     });
   }
+
+  testWidgets('rating page seek buttons change the current rating', (
+    tester,
+  ) async {
+    await mount(tester);
+    await input(tester, DeviceAction.select);
+    await input(tester, DeviceAction.select);
+    final details =
+        container.read(nowPlayingDetailsProvider.notifier) as _Details;
+
+    await input(tester, DeviceAction.seekForward);
+    await input(tester, DeviceAction.seekBackward);
+
+    expect(details.ratingIncreases, 1);
+    expect(details.ratingDecreases, 1);
+    expect(audio._nextSongCalls, 0);
+    expect(audio._previousSongCalls, 0);
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
+
+  testWidgets('rating page long press skips to the next song', (tester) async {
+    await mount(tester);
+    await input(tester, DeviceAction.select);
+    await input(tester, DeviceAction.select);
+
+    await input(tester, DeviceAction.seekForwardLongPress);
+    await input(tester, DeviceAction.longPressEnd);
+
+    expect(audio._nextSongCalls, 1);
+    expect(audio._previousSongCalls, 0);
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
 
   testWidgets('shuffle selection is applied on inactivity', (tester) async {
     await mount(tester);

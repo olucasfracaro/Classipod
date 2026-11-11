@@ -76,7 +76,7 @@ class AlbumModel {
 
   String get totalDurationString => totalDuration.getHourAndMinuteString;
 
-  int? get albumRating {
+  double? get exactAlbumRating {
     if (albumSongs.isEmpty || albumSongs.any((song) => song.rating == 0)) {
       return null;
     }
@@ -84,6 +84,10 @@ class AlbumModel {
       0,
       (total, song) => total + song.rating,
     );
-    return (totalRating / albumSongs.length).round();
+    return totalRating / albumSongs.length;
+  }
+
+  int? get albumRating {
+    return exactAlbumRating?.round();
   }
 }

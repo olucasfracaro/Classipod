@@ -9,6 +9,7 @@ import 'package:classipod/core/widgets/hero_flight_content.dart';
 import 'package:classipod/features/custom_screen_elements/custom_screen.dart';
 import 'package:classipod/features/music/album/models/album_model.dart';
 import 'package:classipod/features/music/album/providers/album_details_provider.dart';
+import 'package:classipod/features/music/cover_flow/widgets/album_rating_display.dart';
 import 'package:classipod/features/music/cover_flow/widgets/cover_flow_album_song_list_tile.dart';
 import 'package:classipod/features/now_playing/provider/now_playing_details_provider.dart';
 import 'package:classipod/features/settings/controller/settings_preferences_controller.dart';
@@ -180,13 +181,22 @@ class _CoverFlowAlbumSelectionScreenState
                           ),
                           maxLines: 1,
                         ),
-                        Text(
-                          '${context.localization.nSongs(_currentAlbumDetail.trackCount)} - '
-                          '${_currentAlbumDetail.totalDurationString}',
-                          style: IpodTypography.caption.copyWith(
-                            color: CupertinoColors.white,
-                          ),
-                          maxLines: 1,
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              '${context.localization.nSongs(_currentAlbumDetail.trackCount)} - '
+                              '${_currentAlbumDetail.totalDurationString}',
+                              style: IpodTypography.caption.copyWith(
+                                color: CupertinoColors.white,
+                              ),
+                              maxLines: 1,
+                            ),
+                            if (_currentAlbumDetail.exactAlbumRating != null)
+                              AlbumRatingDisplay(
+                                rating: _currentAlbumDetail.exactAlbumRating!,
+                              ),
+                          ],
                         ),
                       ],
                     ),
