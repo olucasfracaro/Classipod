@@ -1,6 +1,7 @@
 import 'package:classipod/core/constants/constants.dart';
 import 'package:classipod/core/models/music_metadata.dart';
 import 'package:classipod/core/providers/filtered_audio_files_provider.dart';
+import 'package:classipod/core/utils/album_order.dart';
 import 'package:classipod/core/utils/name_order.dart';
 import 'package:classipod/features/music/album/models/album_model.dart';
 import 'package:classipod/features/music/playlist/models/playlist_model.dart';
@@ -10,7 +11,15 @@ import 'package:hive_ce_flutter/hive_flutter.dart';
 final starredPlaylistProvider = Provider<List<MusicMetadata>>((ref) {
   final List<MusicMetadata> songs =
       ref.watch(filteredAudioFilesProvider).value ?? [];
-  return songs.where((song) => song.rating >= 1).toList();
+  return songs.where((song) => song.rating >= 1).toList()..sort((a, b) {
+    final ratingComparison = b.rating.compareTo(a.rating);
+    if (ratingComparison != 0) return ratingComparison;
+
+    final albumComparison = compareNames(a.getAlbumName, b.getAlbumName);
+    if (albumComparison != 0) return albumComparison;
+
+    return compareAlbumTracks(a, b);
+  });
 });
 
 final playlistsProvider =

@@ -42,7 +42,7 @@ void main() {
     addTearDown(container.dispose);
 
     await container.read(filteredAudioFilesProvider.future);
-    expect(container.read(starredPlaylistProvider), [songs[1], songs[2]]);
+    expect(container.read(starredPlaylistProvider), [songs[2], songs[1]]);
   });
 
   test(
